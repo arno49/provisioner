@@ -1,3 +1,11 @@
+
+# Vagrant
+.vagrant/
+
+# galaxy roles
+galaxy-roles/
+!galaxy-roles/README.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -99,3 +107,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# charm
+.idea/

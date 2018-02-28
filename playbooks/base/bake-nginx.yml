@@ -1,0 +1,6 @@
+- name: "Bake base nginx server"
+  hosts: all
+
+  roles:
+    - role: "nginxinc.nginx-oss"
+      become: True

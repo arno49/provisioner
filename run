@@ -1,0 +1,170 @@
+#!/bin/bash -e
+EXTRA_PARAMS=''
+VENV_PATH=~/.ansible_venv
+PATH="$PATH:$(pwd)/bin"
+ARA_HTML_PATH=~/ara_html/
+progname=$0
+export ANSIBLE_FORCE_COLOR=true
+export DEBIAN_FRONTEND=noninteractive
+export LANGUAGE=en_US.UTF-8
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+echo -e " ==> DevOps CI/CD wrapper <ivan.bogomazov@gmail.com>"
+echo  Running under user `whoami`
+cd "$(dirname "$0")"
+echo  Working dir = `pwd`
+
+function die() {
+    CODE=$?
+    echo  -e "\e[31m▓▓▓▓▓ command died with code $CODE ▓▓▓▓▓\e[39m"
+    exit $CODE
+}
+
+
+function install() {
+    # - install system packages
+    # - create virtual env
+    # - update pip & setuptools
+    # - install requirements
+
+    if [ ! -d $VENV_PATH ]; then
+        echo "Virtualenv in $VENV_PATH doesn't exists, create it"
+        if [[ -x `which virtualenv` ]]; then
+            echo python-virtualenv exists
+        else
+            while { sudo apt-get update 2>&1 || echo E: update failed; } | grep '^[WE]:'; do
+                sleep 5
+                echo Retry
+            done
+            sudo apt-get install -y python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev python-virtualenv python-pip libyaml-dev python-six aptitude tree htop vim screen
+            sudo locale-gen en_US.UTF-8
+            sudo -H pip install -U pip
+        fi
+        virtualenv $VENV_PATH
+    fi
+
+    source $VENV_PATH/bin/activate
+    cd "$(dirname "$0")"
+
+    # install python requirements
+    pip install -U setuptools
+    pip install -r requirements
+
+    # install highlevel ansible requirements
+    [ -f roles/requirements.yml ] && ansible-galaxy install -r roles/requirements.yml -p ./galaxy-roles/ --force || echo "Local roles not required for dependencies"
+
+    if [ $? -ne 0 ]; then
+        install
+    fi
+}
+
+
+function parse_cmdb_file(){
+    PARSED_SETTINGS=$(mktemp); $VENV_PATH/bin/python bin/parser.py $FILE_TO_PARSE > $PARSED_SETTINGS
+}
+
+
+function run_playbook() {
+    # - check virtual env
+    # - activate and run ansible-playbook
+
+    echo Take off with playbook $PLAYBOOK
+    if [ ! -d $VENV_PATH ]; then
+        install
+    fi
+    echo Running ansible
+    echo $PLAYBOOK
+
+    echo "Check for playbook requirements"
+    PLAYBOOK_REQUIREMENTS="$(dirname $(realpath $PLAYBOOK))/requirements.yml"
+    [ -f $PLAYBOOK_REQUIREMENTS ] && ansible-galaxy install -r $PLAYBOOK_REQUIREMENTS -p ./galaxy-roles/ --force || echo "Playbook $PLAYBOOK have no galaxy requirements"
+
+    export ANSIBLE_FORCE_COLOR=True
+    unset LD_LIBRARY_PATH
+    if [[ $EXTRA_PARAMS == *-i* ]]; then
+        if [[ $RUN_PARSER = true ]]; then
+            parse_cmdb_file
+            EXTRA_PARAMS="$EXTRA_PARAMS -e @$PARSED_SETTINGS"
+        fi
+        source $VENV_PATH/bin/activate && ansible-playbook $PLAYBOOK $EXTRA_PARAMS
+    else
+        if [[ $RUN_PARSER = true ]]; then
+            parse_cmdb_file
+            EXTRA_PARAMS="$EXTRA_PARAMS -e @$PARSED_SETTINGS"
+        fi
+        source $VENV_PATH/bin/activate && ansible-playbook $PLAYBOOK -i localhost, -c local $EXTRA_PARAMS
+    fi
+    rc=$?
+
+    if [ -d "~/.ara/" ]; then
+        echo Generating Ansible Run Analyzer HTML files
+        ara_result=$(ara generate html $ARA_HTML_PATH  2>&1)
+        if [ $? -ne 0 ] 
+        then
+            echo -e "\e[31mfail:\e[39m Failed to generate ara report: $ara_result"
+        fi
+    fi
+
+    exit $rc
+}
+
+
+function usage () {
+cat <<EOF
+Usage: $progname [-p path_to_playbook] [-i] [-lvs] [-t tag,...] [-f vault_file] [-I dynamic_inventory.py]
+    -i, --install               install environment
+    -l, --local_install         local install - sets local_install=True
+    -t, --tags                  tags to run (list of tags separated by commas)
+    -v                          run ansible in verbose mode
+    -s, --syntax-check          perform a syntax check on the playbook, but do not execute it
+    -f, --vault-password-file   vault password file
+    -I, --inventory             path to dynamic inventory script
+    -h, --help                  print this message
+EOF
+   exit 0
+}
+
+# replace long options with short ones as getops doesn't support long options
+for arg in "$@"; do
+    shift
+    case "$arg" in
+        "--local_install") set -- "$@" "-l" ;;
+        "--install") set -- "$@" "-i" ;;
+        "--help") set -- "$@" "-h" ;;
+        "--tags") set -- "$@" "-t" ;;
+        "--syntax-check") set -- "$@" "-s" ;;
+        "--vault-password-file") set -- "$@" "-f" ;;
+        "--extra-vars") set -- "$@" "-e" ;;
+        "--inventory") set -- "$@" "-I" ;;
+        *) set -- "$@" "$arg"
+  esac
+done
+
+OPTIND=1
+
+# getopts block
+while getopts ":p:ilt:hvsf:e:I:" opt; do
+    case $opt in
+        p) PLAYBOOK=$OPTARG ;;
+        i) echo 'Install was triggered...'; install && exit || die ;;
+        l) EXTRA_PARAMS=$EXTRA_PARAMS' -e local_install=True' ;;
+        t) EXTRA_PARAMS=$EXTRA_PARAMS' --tags '$OPTARG ;;
+        h) usage ;;
+        v) EXTRA_PARAMS=$EXTRA_PARAMS' -vvvv' ;;
+        s) EXTRA_PARAMS=$EXTRA_PARAMS' --syntax-check' ;;
+        f) EXTRA_PARAMS="$EXTRA_PARAMS --vault-password-file=$OPTARG" ;;
+        e) RUN_PARSER=true; FILE_TO_PARSE=$OPTARG ;;
+        I) EXTRA_PARAMS="$EXTRA_PARAMS -i $OPTARG" ;;
+    esac
+done
+
+shift $(($OPTIND - 1))
+
+# check if playbook variable is set, otherwise print usage
+if [ -z ${PLAYBOOK+x} ]; then
+    echo "PLAYBOOK is unset"
+    usage
+else
+    run_playbook
+fi
+

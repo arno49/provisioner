@@ -1,0 +1,5 @@
+pycparser==2.14
+ansible==2.4.3
+# ara==0.14.6
+netaddr
+boto3
