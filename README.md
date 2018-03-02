@@ -4,6 +4,14 @@ Ansible wrapper for provisionning automation.
 ## How to use
 
 
+### install
+
+```bash
+localhost >> curl -o /tmp/run https://raw.githubusercontent.com/arno49/provisioner/master/run
+localhost >> mkdir ~/my-project-provisioner && cd ~/my-project-provisioner
+localhost >> bash /tmp/run --init
+```
+
 Use ./run to operate.
 
 

@@ -11,8 +11,25 @@ export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 echo -e " ==> DevOps CI/CD wrapper <ivan.bogomazov@gmail.com>"
 echo  Running under user `whoami`
-cd "$(dirname "$0")"
+
 echo  Working dir = `pwd`
+WORKING_DIR=`pwd`
+
+DIRECTORY_STRUCTURE=(
+    "bin"
+    "galaxy-roles"
+    "library"
+    "playbooks"
+    "roles"
+)
+
+DEPENDECY_FILES=(
+    https://raw.githubusercontent.com/arno49/provisioner/master/ansible.cfg
+    https://raw.githubusercontent.com/arno49/provisioner/master/README.md
+    https://raw.githubusercontent.com/arno49/provisioner/master/requirements
+    https://raw.githubusercontent.com/arno49/provisioner/master/run
+    https://raw.githubusercontent.com/arno49/provisioner/master/Vagrantfile
+)
 
 function die() {
     CODE=$?
@@ -38,7 +55,7 @@ function install() {
     fi
 
     source $VENV_PATH/bin/activate
-    cd "$(dirname "$0")"
+    cd $WORKING_DIR
 
     # install python requirements
     pip install -U setuptools
@@ -136,6 +153,24 @@ function run_playbook() {
     exit $rc
 }
 
+function init() {
+#    pwd
+#    if [ ! -d "~/.git/" ]; then
+#        echo "that's not vcs directory, init repo first"
+#    fi
+
+    cd $WORKING_DIR
+    echo "=> creating directory structure"
+    for directory in ${DIRECTORY_STRUCTURE[*]}; do
+        mkdir -p $directory
+    done
+
+    echo "=> downloading dependencies"
+    for filename in ${DEPENDECY_FILES[*]}; do
+        curl -o `basename $filename` $filename
+        chmod +x run
+    done
+}
 
 function usage () {
 cat <<EOF
@@ -147,6 +182,7 @@ Usage: $progname [-p path_to_playbook] [-i] [-lvs] [-t tag,...] [-f vault_file] 
     -s, --syntax-check          perform a syntax check on the playbook, but do not execute it
     -f, --vault-password-file   vault password file
     -I, --inventory             path to dynamic inventory script
+    -n, --init                  init file structure
     -h, --help                  print this message
 EOF
    exit 0
@@ -164,6 +200,7 @@ for arg in "$@"; do
         "--vault-password-file") set -- "$@" "-f" ;;
         "--extra-vars") set -- "$@" "-e" ;;
         "--inventory") set -- "$@" "-I" ;;
+        "--init") set -- "$@" "-n" ;;
         *) set -- "$@" "$arg"
   esac
 done
@@ -171,10 +208,11 @@ done
 OPTIND=1
 
 # getopts block
-while getopts ":p:ilt:hvsf:e:I:" opt; do
+while getopts ":p:inlt:hvsf:e:I:" opt; do
     case $opt in
         p) PLAYBOOK=$OPTARG ;;
         i) echo 'Install was triggered...'; install && exit || die ;;
+        n) echo 'Init file structure triggered...'; init && exit || die ;;
         l) EXTRA_PARAMS=$EXTRA_PARAMS' -e local_install=True' ;;
         t) EXTRA_PARAMS=$EXTRA_PARAMS' --tags '$OPTARG ;;
         h) usage ;;
