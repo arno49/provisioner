@@ -27,20 +27,14 @@ function install() {
     # - update pip & setuptools
     # - install requirements
 
-    if [ ! -d $VENV_PATH ]; then
-        echo "Virtualenv in $VENV_PATH doesn't exists, create it"
-        if [[ -x `which virtualenv` ]]; then
-            echo python-virtualenv exists
-        else
-            while { sudo apt-get update 2>&1 || echo E: update failed; } | grep '^[WE]:'; do
-                sleep 5
-                echo Retry
-            done
-            sudo apt-get install -y python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev python-virtualenv python-pip libyaml-dev python-six aptitude tree htop vim screen
-            sudo locale-gen en_US.UTF-8
-            sudo -H pip install -U pip
-        fi
-        virtualenv $VENV_PATH
+    if [ -f /etc/debian_version ]; then
+        echo "This is debian based distro"
+        install_debian
+    elif [ -f /etc/redhat-release ]; then
+        echo "This is RedHat based distro"
+        install_rh
+    else
+        echo "This install not yet implemented. Please contact ivan.bogomazov@gmail.com"
     fi
 
     source $VENV_PATH/bin/activate
@@ -58,6 +52,40 @@ function install() {
     fi
 }
 
+
+function install_rh() {
+    if [ ! -d $VENV_PATH ]; then
+        echo "Virtualenv in $VENV_PATH doesn't exists, create it"
+        if [[ -x `which virtualenv` ]]; then
+            echo python-virtualenv exists
+        else
+            sudo yum check-update
+            sudo yum groupinstall -y "development tools"
+            sudo yum install -y python-devel libffi-devel openssl-devel libxml2-devel python-virtualenv python-pip libyaml-devel python-six
+            sudo -H pip install -U pip
+        fi
+        virtualenv $VENV_PATH
+    fi
+}
+
+
+function install_debian() {
+    if [ ! -d $VENV_PATH ]; then
+        echo "Virtualenv in $VENV_PATH doesn't exists, create it"
+        if [[ -x `which virtualenv` ]]; then
+            echo python-virtualenv exists
+        else
+            while { sudo apt-get update 2>&1 || echo E: update failed; } | grep '^[WE]:'; do
+                sleep 5
+                echo Retry
+            done
+            sudo apt-get install -y python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev python-virtualenv python-pip libyaml-dev python-six aptitude tree htop vim screen
+            sudo locale-gen en_US.UTF-8
+            sudo -H pip install -U pip
+        fi
+        virtualenv $VENV_PATH
+    fi
+}
 
 function parse_cmdb_file(){
     PARSED_SETTINGS=$(mktemp); $VENV_PATH/bin/python bin/parser.py $FILE_TO_PARSE > $PARSED_SETTINGS

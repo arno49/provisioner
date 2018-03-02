@@ -4,6 +4,7 @@ Vagrant.configure(2) do |config|
   config.ssh.forward_agent = true
   config.vm.hostname = "vagrant-box"
   config.vm.box = "bento/ubuntu-16.04"
+  # config.vm.box = "centos/7"
 
   config.vm.network "forwarded_port", guest: 80, host: 8080
   config.vm.network :private_network, ip: '10.1.100.11'
