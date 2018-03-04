@@ -1,0 +1,3 @@
+# galaxy https://galaxy.ansible.com/geerlingguy/postgresql/
+# role repo https://github.com/geerlingguy/ansible-role-postgresql
+- src: "geerlingguy.postgresql"

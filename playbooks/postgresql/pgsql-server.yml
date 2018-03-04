@@ -1,0 +1,12 @@
+- name: "Install postgresql with configuring user/database"
+  hosts: all
+  vars:
+    postgresql_databases:
+      - name: "example_db"
+    postgresql_users:
+      - name: "example_user"
+        password: "supersecure"
+
+  roles:
+    - role: "geerlingguy.postgresql"
+      become: yes
