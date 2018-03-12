@@ -1,11 +1,29 @@
 - name: "Install postgresql with configuring user/database"
   hosts: all
+
   vars:
     postgresql_databases:
       - name: "example_db"
     postgresql_users:
       - name: "example_user"
         password: "supersecure"
+        priv: "ALL"
+        db: "example_db"
+
+  pre_tasks:
+    - name: "Install psycopg2"
+      apt:
+        name: "python-psycopg2"
+        state: "present"
+      become: True
+      when: ansible_os_family == "Debian"
+
+    - name: "Install psycopg2"
+      yum:
+        name: "python-psycopg2"
+        state: "present"
+      become: True
+      when: ansible_os_family == "RedHat"
 
   roles:
     - role: "geerlingguy.postgresql"
