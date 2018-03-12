@@ -1,0 +1,3 @@
+# galaxy https://galaxy.ansible.com/geerlingguy/nodejs/
+# role repo https://github.com/geerlingguy/ansible-role-nodejs
+- src: "geerlingguy.nodejs"

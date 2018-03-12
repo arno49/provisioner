@@ -1,0 +1,6 @@
+- name: "Install nodejs"
+  hosts: all
+
+  roles:
+    - role: "geerlingguy.nodejs"
+      become: True
