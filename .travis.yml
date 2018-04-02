@@ -5,5 +5,7 @@ python:
   - "3.6"
 install:
   - pip install -r requirements
+before_script:
+  - ./run -i
 script:
   - ./run -p playbooks/base/bake-nginx.yml
