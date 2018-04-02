@@ -96,7 +96,7 @@ function install_debian() {
                 sleep 5
                 echo Retry
             done
-            sudo apt-get install -y python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev python-virtualenv python-pip libyaml-dev python-six aptitude tree htop vim screen
+            sudo apt-get install -y python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev python-virtualenv python-pip libyaml-dev python-six aptitude coreutils
             sudo locale-gen en_US.UTF-8
             sudo -H pip install -U pip
         fi
