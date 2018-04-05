@@ -88,10 +88,7 @@ function install_debian() {
     if [ ! -d $VENV_PATH ]; then
         echo "Virtualenv in $VENV_PATH doesn't exists, create it"
 
-        while { sudo apt-get update 2>&1 || echo E: update failed; } | grep '^[WE]:'; do
-            sleep 5
-            echo Retry
-        done
+        sudo apt-get update
         sudo apt-get install -y python-dev libffi-dev libssl-dev libxml2-dev libxslt1-dev python-virtualenv python-pip libyaml-dev python-six aptitude coreutils
         sudo locale-gen en_US.UTF-8
         sudo -H pip install -U pip
