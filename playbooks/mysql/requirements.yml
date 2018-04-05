@@ -1,0 +1,3 @@
+# galaxy https://galaxy.ansible.com/geerlingguy/mysql/
+# role repo https://github.com/geerlingguy/ansible-role-mysql
+- src: "geerlingguy.mysql"

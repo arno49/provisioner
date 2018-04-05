@@ -1,0 +1,18 @@
+- name: "Install mysql with configuring user/database"
+  hosts: all
+
+  vars:
+    mysql_root_password: root
+    mysql_root_username: root
+
+    mysql_databases:
+      - name: dbname
+    mysql_users:
+      - name: dbuser
+        host: "%"
+        password: dbpass
+        priv: "dbname.*:ALL"
+
+  roles:
+    - role: "geerlingguy.mysql"
+      become: yes
